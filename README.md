@@ -20,9 +20,16 @@ A **show empty** toggle in the Info section header reveals everything at once.
 
 ### Before / after
 
-| Before | After |
-|--------|-------|
-| ~30 rows, most blank | Only filled fields + dimmed important ones |
+<table>
+<tr>
+<th>Before</th>
+<th>After</th>
+</tr>
+<tr>
+<td><img src="docs/before.png" width="340"/></td>
+<td><img src="docs/after.png" width="340"/></td>
+</tr>
+</table>
 
 ## Installation
 
