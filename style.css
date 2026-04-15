@@ -1,0 +1,88 @@
+/* ── Condense Info View ──────────────────────────────────────────────────────
+   Hides empty fields and dims important-but-empty fields in the Info panel.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Completely hidden: empty field that is not important for this item type. */
+.meta-row.civ-row-hidden {
+	display: none !important;
+}
+
+/* Dimmed: empty field that IS important for this item type — visible as a
+   prompt to fill it in, but de-emphasised so it doesn't compete with
+   fields that already have content. */
+.meta-row.civ-row-dimmed {
+	opacity: 0.35;
+	transition: opacity 0.12s ease;
+}
+
+/* Restore full opacity on hover / keyboard focus so the user can click in. */
+.meta-row.civ-row-dimmed:hover,
+.meta-row.civ-row-dimmed:focus-within {
+	opacity: 0.8;
+}
+
+/* ── Creator collapsing ──────────────────────────────────────────────────── */
+
+/* Middle creator rows when collapsed. */
+.meta-row.civ-creator-hidden {
+	display: none !important;
+}
+
+/* The "··· N more" placeholder row. Inherits .meta-row's subgrid layout so
+   the label text sits in the value column, aligned with the author names. */
+.civ-creator-ellipsis {
+	display: grid;
+	grid-column: span 2;
+	grid-template-columns: subgrid;
+	cursor: pointer;
+	padding-block: 1px;
+}
+
+.civ-creator-ellipsis-label {
+	color: var(--fill-secondary, #888);
+	font-size: 11px;
+	font-style: italic;
+	padding-block: 2px;
+}
+
+.civ-creator-ellipsis:hover .civ-creator-ellipsis-label,
+.civ-creator-ellipsis:focus .civ-creator-ellipsis-label {
+	color: var(--accent-blue, var(--fill-primary, #333));
+	text-decoration: underline;
+	outline: none;
+}
+
+/* ── Toggle button ───────────────────────────────────────────────────────── */
+
+button.civ-toggle-btn {
+	/* Reset browser button styles. */
+	appearance: none;
+	-moz-appearance: none;
+	background: transparent;
+	border: none;
+	outline: none;
+	padding: 1px 6px;
+	margin-inline-end: 4px;
+
+	/* Mimic Zotero's secondary text style. */
+	font-size: 10px;
+	font-family: inherit;
+	color: var(--fill-secondary, #888);
+	cursor: pointer;
+	border-radius: 3px;
+	line-height: 1.4;
+	white-space: nowrap;
+
+	/* Subtly separated from the section title. */
+	opacity: 0.7;
+}
+
+button.civ-toggle-btn:hover {
+	opacity: 1;
+	background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+button.civ-toggle-btn.civ-toggle-active {
+	opacity: 1;
+	color: var(--accent-blue, var(--fill-primary, #555));
+}

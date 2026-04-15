@@ -1,0 +1,18 @@
+{
+	"manifest_version": 2,
+	"name": "Condense Info View",
+	"version": "1.0.0",
+	"description": "Hides empty fields in the Info panel. Important fields for each item type are shown dimmed rather than hidden.",
+	"icons": {
+		"48": "content/icons/favicon-48.png",
+		"96": "content/icons/favicon.png"
+	},
+	"applications": {
+		"zotero": {
+			"id": "condense-info-view@example.com",
+			"update_url": "https://raw.githubusercontent.com/pzoot/condense-info-view/main/updates.json",
+			"strict_min_version": "7.0.0",
+			"strict_max_version": "9.*"
+		}
+	}
+}
