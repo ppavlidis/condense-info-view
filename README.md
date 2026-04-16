@@ -2,7 +2,7 @@
 
 A [Zotero](https://www.zotero.org/) plugin that hides empty fields in the Info panel, so you can focus on what's actually there.
 
-![icon](content/icons/favicon.svg)
+![icon](content/icons/favicon.png)
 
 ## What it does
 
@@ -37,7 +37,7 @@ A **show empty** toggle in the Info section header reveals everything at once.
 2. In Zotero: **Tools → Add-ons → gear icon → Install Add-on From File…**
 3. Select the downloaded `.xpi` file and restart when prompted.
 
-Requires **Zotero 7.0 or later** (including Zotero 8).
+Requires **Zotero 7.0 or later** (including Zotero 8 and 9).
 
 ## Usage
 
@@ -81,7 +81,7 @@ echo "$(pwd)" > ~/Library/Application\ Support/Zotero/Profiles/<profile>/extensi
 
 ## Compatibility
 
-- Zotero 7.x and 8.x
+- Zotero 7.x, 8.x, and 9.x
 - macOS, Windows, Linux
 
 ## License
