@@ -6,6 +6,6 @@ PLUGIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 OUT="$PLUGIN_DIR/condense-info-view.xpi"
 
 cd "$PLUGIN_DIR"
-zip -r "$OUT" manifest.json bootstrap.js condense-info-view.js style.css
+zip -r "$OUT" manifest.json bootstrap.js condense-info-view.js style.css content/
 
 echo "Built: $OUT"
