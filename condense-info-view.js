@@ -12,7 +12,8 @@ var CondenseInfoView = {
 	version: null,
 	rootURI: null,
 
-	// Per-window state: Map from Window object → { observers[], addedElementIDs[], showAll, showAllCreators, timer }
+	// Per-window state: Map from Window object → { observers[], addedElementIDs[], showAll, showAllCreators, timer,
+	//   _lastCreatorItemID, _moreLabelClickedForItemID }
 	_windows: new Map(),
 
 	// Minimum number of creator rows before collapsing kicks in.
@@ -187,9 +188,13 @@ var CondenseInfoView = {
 		const infoTable = doc.getElementById("info-table");
 		if (!infoTable) return;
 
-		// Do not reclassify rows while the user is actively editing a field —
-		// that would hide the row they're typing into.
-		if (infoTable.contains(doc.activeElement)) return;
+		// Do not reclassify rows while the user is actively typing in a field —
+		// that would hide the row they're editing. Only bail for actual text
+		// inputs; Zotero moves focus to other elements in the table for
+		// navigation, which should not block our update.
+		const active = doc.activeElement;
+		if (active && infoTable.contains(active) &&
+			(active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) return;
 
 		const data = this._windows.get(window);
 		if (!data) return;
@@ -237,10 +242,11 @@ var CondenseInfoView = {
 		const data = this._windows.get(window);
 		if (!data) return;
 
-		// Reset per-item expanded state when the selected item changes.
+		// Reset per-item state when the selected item changes.
 		const currentItemID = this._getCurrentItemID(window);
 		if (data._lastCreatorItemID !== currentItemID) {
 			data._lastCreatorItemID = currentItemID;
+			data._moreLabelClickedForItemID = null;
 			data.showAllCreators = false;
 		}
 
@@ -254,14 +260,25 @@ var CondenseInfoView = {
 		}
 
 		// Zotero renders only the first 5 creators and adds a "N more..." row
-		// (div#more-creators-label) for the rest — those creators have no DOM
-		// nodes yet. Click it to expand all creators into the DOM; our observer
-		// will re-call _updateCreators once the re-render completes.
+		// (div#more-creators-label) for the rest. Click it once to expand all
+		// creators into the DOM; our observer fires after the re-render.
+		//
+		// Guard: only click once per item. During a sync storm Zotero can keep
+		// re-rendering the creator list with the label still present, causing an
+		// infinite click → mutation → click loop if we click unconditionally.
 		const moreLabel = doc.getElementById("more-creators-label");
 		if (moreLabel) {
-			moreLabel.click();
+			if (data._moreLabelClickedForItemID !== currentItemID) {
+				data._moreLabelClickedForItemID = currentItemID;
+				moreLabel.click();
+			}
+			// Whether we just clicked or already did (and it reappeared during sync),
+			// bail and let Zotero finish rendering before we apply our collapsing.
 			return;
 		}
+		// moreLabel is gone — all creators are in the DOM. Clear the click guard
+		// so it works correctly if this item is navigated away from and back.
+		data._moreLabelClickedForItemID = null;
 
 		// All creators are now in the DOM. If we already applied our collapsing,
 		// skip to avoid an observer feedback loop (inserting the ellipsis node
@@ -332,7 +349,24 @@ var CondenseInfoView = {
 
 	_ensureToggleButton(window) {
 		const doc = window.document;
-		if (doc.getElementById("civ-toggle-btn")) return;
+		const data = this._windows.get(window);
+		if (!data) return;
+
+		// If the button already exists, make sure its label matches data.showAll.
+		// The section header can be rebuilt by Zotero (e.g. during a protocol
+		// navigation), which would remove and recreate our button; if that happens
+		// we create a fresh one below. But occasionally the element survives while
+		// its text gets out of sync — resync it here.
+		const existing = doc.getElementById("civ-toggle-btn");
+		if (existing) {
+			const wantText = data.showAll ? "hide empty" : "show empty";
+			if (existing.textContent !== wantText) {
+				existing.textContent = wantText;
+				existing.title = data.showAll ? "Hide empty fields" : "Show all empty fields";
+				existing.classList.toggle("civ-toggle-active", data.showAll);
+			}
+			return;
+		}
 
 		// Insert into the collapsible-section header for the Info pane,
 		// just before the expand/collapse twisty button.
@@ -342,14 +376,14 @@ var CondenseInfoView = {
 		const head = section?.querySelector(".head");
 		if (!head) return;
 
-		const data = this._windows.get(window);
-		if (!data) return;
-
 		const btn = doc.createElement("button");
 		btn.id = "civ-toggle-btn";
 		btn.className = "civ-toggle-btn";
-		btn.textContent = "show empty";
-		btn.title = "Show all empty fields";
+		// Initialise label from current state, not always "show empty", so that
+		// if the button is recreated after a re-render the label stays correct.
+		btn.textContent = data.showAll ? "hide empty" : "show empty";
+		btn.title = data.showAll ? "Hide empty fields" : "Show all empty fields";
+		btn.classList.toggle("civ-toggle-active", data.showAll);
 
 		const self = this;
 		btn.addEventListener("click", (e) => {

@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Condense Info View",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Hides empty fields in the Info panel. Important fields for each item type are shown dimmed rather than hidden.",
 	"icons": {
 		"48": "content/icons/favicon-48.png",
