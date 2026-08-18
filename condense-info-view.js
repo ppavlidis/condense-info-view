@@ -189,12 +189,29 @@ var CondenseInfoView = {
 
 	// ─── Row update logic ─────────────────────────────────────────────────────
 
+	// Leading-edge + trailing debounce. The first mutation after a quiet
+	// period classifies rows SYNCHRONOUSLY — still inside the mutation
+	// observer callback, i.e. before this batch of DOM changes is painted —
+	// so switching items never flashes the uncondensed table. (A trailing
+	// debounce alone deferred the first pass until 80ms of mutation
+	// SILENCE; an item switch's async field loads keep the timer re-arming,
+	// which measured as ~600ms / ~35 frames of fully-expanded table on
+	// every switch.) Later mutations in the same burst still coalesce into
+	// one trailing pass, which also settles any rows whose values loaded
+	// after the leading pass ran.
 	_scheduleUpdate(window) {
 		const data = this._windows.get(window);
 		if (!data) return;
+		const now = window.performance.now();
+		if (!data._lastRun || now - data._lastRun >= 150) {
+			data._lastRun = now;
+			this._updateRows(window);
+			return;
+		}
 		if (data.timer) window.clearTimeout(data.timer);
 		data.timer = window.setTimeout(() => {
 			data.timer = null;
+			data._lastRun = window.performance.now();
 			this._updateRows(window);
 		}, 80);
 	},
