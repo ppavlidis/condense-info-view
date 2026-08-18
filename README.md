@@ -37,7 +37,7 @@ A **show empty** toggle in the Info section header reveals everything at once.
 2. In Zotero: **Tools → Add-ons → gear icon → Install Add-on From File…**
 3. Select the downloaded `.xpi` file and restart when prompted.
 
-Requires **Zotero 7.0 or later** (including Zotero 8 and 9).
+Requires **Zotero 7.0 or later** (including Zotero 8, 9, and 10).
 
 ## Usage
 
@@ -81,7 +81,7 @@ echo "$(pwd)" > ~/Library/Application\ Support/Zotero/Profiles/<profile>/extensi
 
 ## Compatibility
 
-- Zotero 7.x, 8.x, and 9.x
+- Zotero 7.x, 8.x, 9.x, and 10.x
 - macOS, Windows, Linux
 
 ## License
