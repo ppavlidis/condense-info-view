@@ -1,0 +1,17 @@
+{
+	"addons": {
+		"condense-info-view@example.com": {
+			"updates": [
+				{
+					"version": "1.0.0",
+					"update_link": "https://github.com/ppavlidis/condense-info-view/releases/download/v1.0.0/condense-info-view.xpi",
+					"applications": {
+						"zotero": {
+							"strict_min_version": "7.0.0"
+						}
+					}
+				}
+			]
+		}
+	}
+}
