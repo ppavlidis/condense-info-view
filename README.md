@@ -37,13 +37,14 @@ A **show empty** toggle in the Info section header reveals everything at once.
 2. In Zotero: **Tools → Add-ons → gear icon → Install Add-on From File…**
 3. Select the downloaded `.xpi` file and restart when prompted.
 
-Requires **Zotero 7.0 or later** (including Zotero 8 and 9).
+Requires **Zotero 7.0 or later** (including Zotero 8, 9 and 10).
 
 ## Usage
 
 - **Normal view:** empty unimportant fields are hidden; empty important fields are dimmed.
 - **show empty button** (in the Info section header, next to the collapse arrow): reveals all empty fields temporarily. Click **hide empty** to return to condensed view.
 - **Author collapsing:** items with 3+ authors show only the first and last. Click **··· N more** to expand. Selecting a new item re-collapses automatically.
+- **Multiple items selected** (Zotero 10): the batch-editing Info pane is condensed the same way. A field whose value differs between the selected items shows Zotero's *Multiple* placeholder and is never hidden; which empty fields are dimmed comes from the item type when every selected item shares one.
 
 ## Important fields by item type
 
@@ -79,9 +80,21 @@ echo "$(pwd)" > ~/Library/Application\ Support/Zotero/Profiles/<profile>/extensi
 # Then remove extensions.lastAppVersion from prefs.js and restart Zotero
 ```
 
+### Releasing
+
+`.github/workflows/build.yml` builds `condense-info-view.xpi` on every push and
+attaches it to the GitHub release when a `v*` tag is pushed. Bump `version` in
+`manifest.json` and the `version` / `update_link` in `updates.json` together —
+the workflow refuses a tag whose version, manifest and update manifest disagree.
+Zotero reads `updates.json` from `main` to offer in-app updates.
+
+```bash
+git tag v1.2.3 && git push origin v1.2.3
+```
+
 ## Compatibility
 
-- Zotero 7.x, 8.x, and 9.x
+- Zotero 7.x, 8.x, 9.x, and 10.x
 - macOS, Windows, Linux
 
 ## License

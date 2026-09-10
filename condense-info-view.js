@@ -13,7 +13,7 @@ var CondenseInfoView = {
 	rootURI: null,
 
 	// Per-window state: Map from Window object → { observers[], addedElementIDs[], showAll, showAllCreators, timer,
-	//   _lastCreatorItemID, _moreLabelClickedTables (WeakSet of tables clicked for current item) }
+	//   _lastCreatorSelectionKey, _moreLabelClickedTables (WeakSet of tables clicked for current selection) }
 	_windows: new Map(),
 
 	// Minimum number of creator rows before collapsing kicks in.
@@ -165,12 +165,14 @@ var CondenseInfoView = {
 
 				const obs = new window.MutationObserver(() => self._scheduleUpdate(window));
 				// childList catches row add/remove (item type changes re-render all rows).
-				// attributeFilter catches editable-text value changes while on the same item.
+				// attributeFilter catches editable-text value changes while on the same
+				// item, plus the multiple-values flag Zotero 10 toggles when a
+				// batch-edited field goes from one shared value to several.
 				obs.observe(table, {
 					childList: true,
 					subtree: true,
 					attributes: true,
-					attributeFilter: ["value"],
+					attributeFilter: ["value", "multiple-values"],
 				});
 				data.observers.push(obs);
 			}
@@ -262,10 +264,10 @@ var CondenseInfoView = {
 		const data = this._windows.get(window);
 		if (!data) return;
 
-		// Reset per-item state when the selected item changes.
-		const currentItemID = this._getCurrentItemID(window);
-		if (data._lastCreatorItemID !== currentItemID) {
-			data._lastCreatorItemID = currentItemID;
+		// Reset per-item state when the selection changes.
+		const selectionKey = this._getSelectionKey(window);
+		if (data._lastCreatorSelectionKey !== selectionKey) {
+			data._lastCreatorSelectionKey = selectionKey;
 			data._moreLabelClickedTables = null;
 			data.showAllCreators = false;
 		}
@@ -281,11 +283,11 @@ var CondenseInfoView = {
 		if (data.showAll || data.showAllCreators) return;
 
 		for (const infoTable of infoTables) {
-			this._collapseCreatorsIn(window, infoTable, currentItemID);
+			this._collapseCreatorsIn(window, infoTable);
 		}
 	},
 
-	_collapseCreatorsIn(window, infoTable, currentItemID) {
+	_collapseCreatorsIn(window, infoTable) {
 		const doc = window.document;
 		const data = this._windows.get(window);
 
@@ -387,23 +389,32 @@ var CondenseInfoView = {
 		}
 	},
 
-	_getCurrentItemID(window) {
+	// Identifies the current selection so that per-item UI state (creator
+	// collapsing) resets when it changes. A key over every selected item rather
+	// than a single ID, because Zotero 10 shows the Info pane for multi-item
+	// selections as well.
+	_getSelectionKey(window) {
 		try {
 			const items = window.ZoteroPane?.getSelectedItems?.();
-			return items?.length === 1 ? items[0].id : null;
+			return items?.length ? items.map(item => item.id).join(",") : null;
 		} catch (_) {
 			return null;
 		}
 	},
 
+	// Zotero 10 renders a batch-editing Info pane for a multi-item selection, so
+	// any selection whose items share one item type gets that type's list. A
+	// mixed-type selection falls back to DEFAULT_IMPORTANT.
 	_importantFieldsForWindow(window) {
 		try {
-			const pane = window.ZoteroPane;
-			const items = pane?.getSelectedItems?.();
-			if (items?.length === 1) {
-				const typeName = Zotero.ItemTypes.getName(items[0].itemTypeID);
-				const list = this.IMPORTANT_BY_TYPE[typeName] || this.DEFAULT_IMPORTANT;
-				return new Set(list);
+			const items = window.ZoteroPane?.getSelectedItems?.();
+			if (items?.length) {
+				const typeID = items[0].itemTypeID;
+				if (items.every(item => item.itemTypeID === typeID)) {
+					const typeName = Zotero.ItemTypes.getName(typeID);
+					const list = this.IMPORTANT_BY_TYPE[typeName] || this.DEFAULT_IMPORTANT;
+					return new Set(list);
+				}
 			}
 		} catch (_) {}
 		return new Set(this.DEFAULT_IMPORTANT);
@@ -497,6 +508,11 @@ var CondenseInfoView = {
 		if (!fields.length) return false; // Non-text row — leave alone.
 
 		return Array.from(fields).every((et) => {
+			// Zotero 10 batch editing: with several items selected, a field whose
+			// value differs between them is rendered with an empty value and a
+			// "Multiple" placeholder. The field holds data, so don't hide the row.
+			if (et.hasAttribute("multiple-values")) return false;
+
 			// Prefer the live DOM property; fall back to the HTML attribute.
 			const propVal = typeof et.value === "string" ? et.value : null;
 			const attrVal = et.getAttribute("value");

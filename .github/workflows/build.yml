@@ -1,0 +1,93 @@
+name: Build XPI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from manifest
+        id: manifest
+        run: |
+          jq empty manifest.json
+          jq empty updates.json
+          version=$(jq -r .version manifest.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "manifest version: $version"
+
+      # A tag is what users install from, so refuse to publish one whose version,
+      # manifest and update manifest disagree — Zotero offers an update only when
+      # updates.json advertises a version above the installed one, at a link that
+      # resolves.
+      - name: Check tag agrees with manifest.json and updates.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          VERSION: ${{ steps.manifest.outputs.version }}
+        run: |
+          fail=0
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match manifest version $VERSION (expected v$VERSION)"
+            fail=1
+          fi
+          update_version=$(jq -r '.addons["condense-info-view@example.com"].updates[-1].version' updates.json)
+          if [ "$update_version" != "$VERSION" ]; then
+            echo "::error::updates.json advertises $update_version, manifest says $VERSION"
+            fail=1
+          fi
+          update_link=$(jq -r '.addons["condense-info-view@example.com"].updates[-1].update_link' updates.json)
+          expected="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/condense-info-view.xpi"
+          if [ "$update_link" != "$expected" ]; then
+            echo "::error::updates.json update_link is $update_link, expected $expected"
+            fail=1
+          fi
+          update_url=$(jq -r '.applications.zotero.update_url' manifest.json)
+          if [ "$update_url" != "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/updates.json" ]; then
+            echo "::error::manifest update_url $update_url does not point at this repo's updates.json"
+            fail=1
+          fi
+          exit $fail
+
+      - name: Build XPI
+        run: bash build-xpi.sh
+
+      # v1.0.1 had to be released because the icons were never packaged. Check the
+      # archive rather than trusting the zip line in build-xpi.sh.
+      - name: Verify XPI contents
+        run: |
+          contents=$(unzip -Z1 condense-info-view.xpi)
+          echo "$contents"
+          fail=0
+          for f in manifest.json bootstrap.js condense-info-view.js style.css \
+                   content/icons/favicon.png content/icons/favicon-48.png; do
+            printf '%s\n' "$contents" | grep -qxF "$f" || { echo "::error::$f missing from XPI"; fail=1; }
+          done
+          exit $fail
+
+      - name: Upload XPI as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: condense-info-view-${{ steps.manifest.outputs.version }}
+          path: condense-info-view.xpi
+          if-no-files-found: error
+
+      - name: Attach XPI to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" condense-info-view.xpi --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" condense-info-view.xpi \
+              --title "$GITHUB_REF_NAME" --generate-notes
+          fi
